@@ -51,6 +51,14 @@ npm run build
 npm run preview
 ```
 
+## Deploy en GitHub Pages
+
+- El proyecto incluye workflow automático en `.github/workflows/deploy-pages.yml`.
+- Cada push a `main` construye y publica la carpeta `dist` en GitHub Pages.
+- URL esperada del sitio: `https://adherrera14.github.io/formulario-evaluacion-fisioterapia/`
+
+Si es la primera vez, en GitHub ve a **Settings → Pages** y confirma que la fuente sea **GitHub Actions**.
+
 ## Publicar en GitHub
 
 Si tienes `gh` autenticado:
