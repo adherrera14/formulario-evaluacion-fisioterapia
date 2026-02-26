@@ -5,9 +5,15 @@ Aplicación web en React + TypeScript para registrar una evaluación funcional d
 ## Funcionalidades
 
 - Formulario clínico estructurado (paciente, antecedentes, cribado, plan).
-- Carga de logo del fisioterapeuta para encabezado del informe.
+- Logo fijo del fisioterapeuta en encabezado del formulario y del informe PDF.
 - Datos de contacto del profesional incluidos en el PDF.
 - Botón de guardado y generación de PDF para compartir/imprimir.
+
+## Logo fijo del centro
+
+- El formulario y el PDF usan siempre el archivo `public/logo.png`.
+- No es necesario subir el logo cada vez que se completa un formulario.
+- Si deseas cambiarlo, reemplaza `public/logo.png` por la versión nueva.
 
 ## Requisitos
 

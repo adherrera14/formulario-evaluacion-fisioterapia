@@ -122,7 +122,6 @@ const interventionOptions = [
 
 function App() {
   const [form, setForm] = useState<FormState>(initialForm)
-  const [logoDataUrl, setLogoDataUrl] = useState<string>('')
   const [submitted, setSubmitted] = useState(false)
 
   const today = useMemo(() => new Date().toLocaleDateString('es-ES'), [])
@@ -146,25 +145,29 @@ function App() {
     })
   }
 
-  const handleLogoUpload = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) {
-      setLogoDataUrl('')
-      return
-    }
-
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setLogoDataUrl(reader.result)
-      }
-    }
-    reader.readAsDataURL(file)
-  }
-
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault()
     setSubmitted(true)
+  }
+
+  const getLogoDataUrl = async () => {
+    const response = await fetch('/logo.png')
+    if (!response.ok) {
+      return null
+    }
+    const logoBlob = await response.blob()
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result)
+          return
+        }
+        reject(new Error('No se pudo leer logo.png'))
+      }
+      reader.onerror = () => reject(new Error('No se pudo convertir logo.png'))
+      reader.readAsDataURL(logoBlob)
+    })
   }
 
   const addLabeledLine = (
@@ -189,14 +192,14 @@ function App() {
     return cursorY
   }
 
-  const generatePdf = () => {
+  const generatePdf = async () => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
     let cursorY = 12
+    const logoDataUrl = await getLogoDataUrl()
     if (logoDataUrl) {
-      const format = logoDataUrl.includes('image/png') ? 'PNG' : 'JPEG'
-      doc.addImage(logoDataUrl, format, 10, cursorY, 28, 28)
+      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, 28, 28)
     }
 
     doc.setFontSize(16)
@@ -323,10 +326,10 @@ function App() {
             <input name="direccionCentro" value={form.direccionCentro} onChange={handleChange} />
           </label>
           <label>
-            Logo (PNG/JPG)
-            <input type="file" accept="image/png,image/jpeg" onChange={handleLogoUpload} />
+            Logo del informe (fijo)
+            <input value="public/logo.png" readOnly />
           </label>
-          {logoDataUrl && <img className="logo-preview" src={logoDataUrl} alt="Logo cargado" />}
+          <img className="logo-preview" src="/logo.png" alt="Logo del centro" />
         </section>
 
         <section className="panel">
