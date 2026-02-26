@@ -13,18 +13,18 @@
 }
 
 .brand-logo-badge {
-  width: 148px;
-  height: 148px;
+  width: 150px;
+  height: 150px;
   border-radius: 999px;
-  background: #ffffff;
+  background: #fff;
   display: grid;
   place-items: center;
 }
 
 .brand-logo {
-  width: 104px;
-  height: 104px;
+  width: 125px;
   object-fit: contain;
+  margin-top: -20px;
 }
 
 .brand-header h1 {
@@ -193,8 +193,8 @@ textarea {
   }
 
   .brand-logo {
-    width: 88px;
-    height: 88px;
+    width: 110px;
+    margin-top: -18px;
   }
 
   .brand-logo-badge {
