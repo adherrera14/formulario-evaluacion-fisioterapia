@@ -4,6 +4,19 @@
   padding: 2rem 1rem 4rem;
 }
 
+.brand-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.2rem;
+}
+
+.brand-logo {
+  height: 56px;
+  width: auto;
+  object-fit: contain;
+}
+
 .app-shell h1 {
   font-size: 2rem;
   margin: 0;
@@ -70,14 +83,6 @@ textarea {
   resize: vertical;
 }
 
-.logo-preview {
-  max-height: 70px;
-  width: auto;
-  border: 1px solid #cfcfcf;
-  border-radius: 8px;
-  padding: 0.2rem;
-}
-
 .checkboxes {
   border: 1px solid #d7d7d7;
   border-radius: 8px;
@@ -111,5 +116,10 @@ textarea {
   .three-cols,
   .five-cols {
     grid-template-columns: 1fr;
+  }
+
+  .brand-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }

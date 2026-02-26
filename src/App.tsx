@@ -196,23 +196,25 @@ function App() {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
 
-    let cursorY = 12
+    let cursorY = 8
     const logoDataUrl = await getLogoDataUrl()
     if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, 28, 28)
+      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, 32, 20)
     }
 
     doc.setFontSize(16)
-    doc.text('Informe de Valoración Funcional', 45, 18)
+    doc.text('Informe de Valoración Funcional', 47, 14)
     doc.setFontSize(10)
-    doc.text(`Fecha de emisión: ${today}`, 45, 25)
-    doc.text(`Fisioterapeuta: ${form.fisioterapeuta || 'No especificado'}`, 45, 31)
-    doc.text(`Nº colegiado: ${form.numeroColegiado || 'No especificado'}`, 45, 37)
-    doc.text(`Contacto: ${form.contactoCentro || 'No especificado'}`, 45, 43)
-    doc.text(`Correo: ${form.correoCentro || 'No especificado'}`, 45, 49)
-    doc.text(`Dirección: ${form.direccionCentro || 'No especificado'}`, 45, 55)
+    doc.text(`Fecha de emisión: ${today}`, 47, 20)
+    doc.text(`Fisioterapeuta: ${form.fisioterapeuta || 'No especificado'}`, 47, 26)
+    doc.text(`Nº colegiado: ${form.numeroColegiado || 'No especificado'}`, 47, 32)
+    doc.text(`Contacto: ${form.contactoCentro || 'No especificado'}`, 47, 38)
+    doc.text(`Correo: ${form.correoCentro || 'No especificado'}`, 47, 44)
+    doc.text(`Dirección: ${form.direccionCentro || 'No especificado'}`, 47, 50)
+    doc.setLineWidth(0.4)
+    doc.line(10, 56, pageWidth - 10, 56)
 
-    cursorY = 65
+    cursorY = 64
 
     const writeSection = (title: string, rows: Array<{ label: string; value: string }>) => {
       cursorY = ensurePage(doc, cursorY)
@@ -297,8 +299,13 @@ function App() {
 
   return (
     <main className="app-shell">
-      <h1>Formulario de Valoración Funcional</h1>
-      <p className="app-subtitle">Uso clínico para fisioterapia con exportación a PDF en español.</p>
+      <header className="brand-header">
+        <img src="/logo.png" alt="Logo del centro" className="brand-logo" />
+        <div>
+          <h1>Formulario de Valoración Funcional</h1>
+          <p className="app-subtitle">Uso clínico para fisioterapia con exportación a PDF en español.</p>
+        </div>
+      </header>
 
       <form onSubmit={handleSubmit} className="form-layout">
         <section className="panel">
@@ -329,7 +336,6 @@ function App() {
             Logo del informe (fijo)
             <input value="public/logo.png" readOnly />
           </label>
-          <img className="logo-preview" src="/logo.png" alt="Logo del centro" />
         </section>
 
         <section className="panel">
