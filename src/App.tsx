@@ -330,6 +330,10 @@ function App() {
       })
 
       if (!response.ok) {
+        if (response.status === 404) {
+          setSaveMessage('El servidor no reconoce la ruta de eliminación. Reinicia con npm run dev:full.')
+          return
+        }
         throw new Error('No fue posible eliminar el formulario.')
       }
 
@@ -389,25 +393,35 @@ function App() {
   const generatePdf = async () => {
     const doc = new jsPDF()
     const pageWidth = doc.internal.pageSize.getWidth()
+    const rightX = pageWidth - 10
 
     let cursorY = 8
     const logoDataUrl = await getLogoDataUrl()
     if (logoDataUrl) {
-      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, 32, 20)
+      const maxLogoWidth = 46
+      const maxLogoHeight = 34
+      const logoProps = doc.getImageProperties(logoDataUrl)
+      const widthRatio = maxLogoWidth / logoProps.width
+      const heightRatio = maxLogoHeight / logoProps.height
+      const scale = Math.min(widthRatio, heightRatio)
+      const logoWidth = logoProps.width * scale
+      const logoHeight = logoProps.height * scale
+
+      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, logoWidth, logoHeight)
     }
 
     doc.setFontSize(16)
-    doc.text('Informe de Valoración Funcional', 47, 14)
+    doc.text('Informe de Valoración Funcional', rightX, 14, { align: 'right' })
     doc.setFontSize(10)
-    doc.text(`Fecha de emisión: ${today}`, 47, 20)
-    doc.text(`Fisioterapeuta: ${professionalProfile.nombre}`, 47, 26)
-    doc.text(`Teléfono: ${professionalProfile.telefono}`, 47, 32)
-    doc.text(`Email: ${professionalProfile.email}`, 47, 38)
-    doc.text(`Código profesional: ${professionalProfile.codigo}`, 47, 44)
+    doc.text(`Fecha de emisión: ${today}`, rightX, 20, { align: 'right' })
+    doc.text(`Fisioterapeuta: ${professionalProfile.nombre}`, rightX, 26, { align: 'right' })
+    doc.text(`Teléfono: ${professionalProfile.telefono}`, rightX, 32, { align: 'right' })
+    doc.text(`Email: ${professionalProfile.email}`, rightX, 38, { align: 'right' })
+    doc.text(`Código profesional: ${professionalProfile.codigo}`, rightX, 44, { align: 'right' })
     doc.setLineWidth(0.4)
-    doc.line(10, 50, pageWidth - 10, 50)
+    doc.line(10, 54, pageWidth - 10, 54)
 
-    cursorY = 58
+    cursorY = 62
 
     const writeSection = (title: string, rows: Array<{ label: string; value: string }>) => {
       const rowsWithValue = rows.filter((row) => row.value.trim().length > 0)
