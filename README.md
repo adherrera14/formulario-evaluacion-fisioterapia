@@ -6,8 +6,17 @@ Aplicación web en React + TypeScript para registrar una evaluación funcional d
 
 - Formulario clínico estructurado (paciente, antecedentes, cribado, plan).
 - Logo fijo del fisioterapeuta en encabezado del formulario y del informe PDF.
-- Datos de contacto del profesional incluidos en el PDF.
+- Datos profesionales fijos de Irene Duarte incluidos automáticamente en el PDF.
 - Botón de guardado y generación de PDF para compartir/imprimir.
+
+## Datos profesionales fijos (PDF)
+
+El formulario web no solicita datos del fisioterapeuta. El PDF siempre mostrará:
+
+- Irene Duarte Guzmán
+- Teléfono: 8699-3166
+- Email: irene.duarte@hotmail.com
+- Código profesional: CTCR TF-2417
 
 ## Logo fijo del centro
 
@@ -59,5 +68,4 @@ git push -u origin main
 ## Personalización pendiente
 
 - Sustituir el logo de ejemplo por el logo final del centro.
-- Confirmar datos finales de contacto para encabezado del informe.
 - Ajustar/expandir preguntas según tu protocolo clínico final.

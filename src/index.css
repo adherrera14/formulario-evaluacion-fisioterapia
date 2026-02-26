@@ -3,7 +3,7 @@
   line-height: 1.5;
   font-weight: 400;
   color: #1f1f1f;
-  background-color: #f6f7fb;
+  background-color: #91A6C1;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -14,7 +14,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  background-color: #f6f7fb;
+  background-color: #91A6C1;
 }
 
 button {

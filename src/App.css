@@ -6,20 +6,35 @@
 
 .brand-header {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.6rem;
   margin-bottom: 1.2rem;
 }
 
+.brand-logo-badge {
+  width: 148px;
+  height: 148px;
+  border-radius: 999px;
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+}
+
 .brand-logo {
-  height: 56px;
-  width: auto;
+  width: 104px;
+  height: 104px;
   object-fit: contain;
+}
+
+.brand-header h1 {
+  text-align: center;
 }
 
 .app-shell h1 {
   font-size: 2rem;
   margin: 0;
+  color: #2f4a6f;
 }
 
 .app-subtitle {
@@ -43,6 +58,7 @@
 .panel h2 {
   margin-top: 0;
   font-size: 1.15rem;
+  color: #2f4a6f;
 }
 
 .grid {
@@ -118,8 +134,13 @@ textarea {
     grid-template-columns: 1fr;
   }
 
-  .brand-header {
-    flex-direction: column;
-    align-items: flex-start;
+  .brand-logo {
+    width: 88px;
+    height: 88px;
+  }
+
+  .brand-logo-badge {
+    width: 132px;
+    height: 132px;
   }
 }

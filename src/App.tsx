@@ -13,11 +13,6 @@ type FormState = {
   direccion: string
   fechaEvaluacion: string
   evaluador: string
-  fisioterapeuta: string
-  numeroColegiado: string
-  contactoCentro: string
-  correoCentro: string
-  direccionCentro: string
   caidas12Meses: string
   lesionesRelacionadas: string
   enfermedadesCronicas: string
@@ -67,11 +62,6 @@ const initialForm: FormState = {
   direccion: '',
   fechaEvaluacion: '',
   evaluador: '',
-  fisioterapeuta: '',
-  numeroColegiado: '',
-  contactoCentro: '',
-  correoCentro: '',
-  direccionCentro: '',
   caidas12Meses: '',
   lesionesRelacionadas: '',
   enfermedadesCronicas: '',
@@ -119,6 +109,13 @@ const interventionOptions = [
   'Educación sobre caídas',
   'Adaptación del hogar',
 ]
+
+const professionalProfile = {
+  nombre: 'Irene Duarte Guzmán',
+  telefono: '8699-3166',
+  email: 'irene.duarte@hotmail.com',
+  codigo: 'CTCR TF-2417',
+}
 
 function App() {
   const [form, setForm] = useState<FormState>(initialForm)
@@ -177,8 +174,7 @@ function App() {
     cursorY: number,
     pageWidth: number,
   ) => {
-    const safeValue = value?.trim() ? value : 'No especificado'
-    const content = `${label}: ${safeValue}`
+    const content = `${label}: ${value.trim()}`
     const lines = doc.splitTextToSize(content, pageWidth - 20)
     doc.text(lines, 10, cursorY)
     return cursorY + lines.length * 6
@@ -206,23 +202,27 @@ function App() {
     doc.text('Informe de Valoración Funcional', 47, 14)
     doc.setFontSize(10)
     doc.text(`Fecha de emisión: ${today}`, 47, 20)
-    doc.text(`Fisioterapeuta: ${form.fisioterapeuta || 'No especificado'}`, 47, 26)
-    doc.text(`Nº colegiado: ${form.numeroColegiado || 'No especificado'}`, 47, 32)
-    doc.text(`Contacto: ${form.contactoCentro || 'No especificado'}`, 47, 38)
-    doc.text(`Correo: ${form.correoCentro || 'No especificado'}`, 47, 44)
-    doc.text(`Dirección: ${form.direccionCentro || 'No especificado'}`, 47, 50)
+    doc.text(`Fisioterapeuta: ${professionalProfile.nombre}`, 47, 26)
+    doc.text(`Teléfono: ${professionalProfile.telefono}`, 47, 32)
+    doc.text(`Email: ${professionalProfile.email}`, 47, 38)
+    doc.text(`Código profesional: ${professionalProfile.codigo}`, 47, 44)
     doc.setLineWidth(0.4)
-    doc.line(10, 56, pageWidth - 10, 56)
+    doc.line(10, 50, pageWidth - 10, 50)
 
-    cursorY = 64
+    cursorY = 58
 
     const writeSection = (title: string, rows: Array<{ label: string; value: string }>) => {
+      const rowsWithValue = rows.filter((row) => row.value.trim().length > 0)
+      if (rowsWithValue.length === 0) {
+        return
+      }
+
       cursorY = ensurePage(doc, cursorY)
       doc.setFontSize(12)
       doc.text(title, 10, cursorY)
       cursorY += 7
       doc.setFontSize(10)
-      rows.forEach((row) => {
+      rowsWithValue.forEach((row) => {
         cursorY = ensurePage(doc, cursorY)
         cursorY = addLabeledLine(doc, row.label, row.value, cursorY, pageWidth)
       })
@@ -283,7 +283,7 @@ function App() {
       { label: 'Duración por sesión (min)', value: form.duracionSesion },
       {
         label: 'Intervenciones propuestas',
-        value: form.intervenciones.length ? form.intervenciones.join(', ') : 'No especificado',
+        value: form.intervenciones.join(', '),
       },
       { label: 'Ejercicios indicados hoy', value: form.ejerciciosHoy },
       { label: 'Impresión funcional / plan 3 meses', value: form.impresionFuncional },
@@ -300,44 +300,15 @@ function App() {
   return (
     <main className="app-shell">
       <header className="brand-header">
-        <img src="/logo.png" alt="Logo del centro" className="brand-logo" />
+        <div className="brand-logo-badge">
+          <img src="/logo.png" alt="Logo del centro" className="brand-logo" />
+        </div>
         <div>
           <h1>Formulario de Valoración Funcional</h1>
-          <p className="app-subtitle">Uso clínico para fisioterapia con exportación a PDF en español.</p>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="form-layout">
-        <section className="panel">
-          <h2>Datos del fisioterapeuta (encabezado del PDF)</h2>
-          <div className="grid two-cols">
-            <label>
-              Nombre del fisioterapeuta
-              <input name="fisioterapeuta" value={form.fisioterapeuta} onChange={handleChange} />
-            </label>
-            <label>
-              Nº de colegiado
-              <input name="numeroColegiado" value={form.numeroColegiado} onChange={handleChange} />
-            </label>
-            <label>
-              Teléfono / contacto
-              <input name="contactoCentro" value={form.contactoCentro} onChange={handleChange} />
-            </label>
-            <label>
-              Correo electrónico
-              <input name="correoCentro" value={form.correoCentro} onChange={handleChange} />
-            </label>
-          </div>
-          <label>
-            Dirección profesional
-            <input name="direccionCentro" value={form.direccionCentro} onChange={handleChange} />
-          </label>
-          <label>
-            Logo del informe (fijo)
-            <input value="public/logo.png" readOnly />
-          </label>
-        </section>
-
         <section className="panel">
           <h2>Datos del paciente</h2>
           <div className="grid two-cols">
