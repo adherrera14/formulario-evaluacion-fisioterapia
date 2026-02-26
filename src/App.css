@@ -169,11 +169,21 @@ textarea {
 
 .hint {
   margin: 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d7d7d7;
   color: #6f6f6f;
+  opacity: 1;
+  transition: opacity 0.5s ease;
 }
 
 .success {
   color: #176128;
+}
+
+.hint.fade-out {
+  opacity: 0;
 }
 
 @media (max-width: 860px) {

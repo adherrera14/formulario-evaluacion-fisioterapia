@@ -255,6 +255,7 @@ function App() {
   const [selectedFormId, setSelectedFormId] = useState('')
   const [loadedFormId, setLoadedFormId] = useState('')
   const [saveMessage, setSaveMessage] = useState('')
+  const [isSaveMessageFading, setIsSaveMessageFading] = useState(false)
 
   const today = useMemo(() => formatDateForPdf(new Date()), [])
   const logoPath = `${import.meta.env.BASE_URL}logo.png`
@@ -262,6 +263,29 @@ function App() {
     saveMessage.startsWith('Error') ||
     saveMessage.startsWith('Para guardar') ||
     saveMessage.startsWith('No fue posible')
+
+  useEffect(() => {
+    if (!saveMessage) {
+      setIsSaveMessageFading(false)
+      return
+    }
+
+    setIsSaveMessageFading(false)
+
+    const fadeTimeoutId = window.setTimeout(() => {
+      setIsSaveMessageFading(true)
+    }, 5000)
+
+    const clearTimeoutId = window.setTimeout(() => {
+      setSaveMessage('')
+      setIsSaveMessageFading(false)
+    }, 5500)
+
+    return () => {
+      window.clearTimeout(fadeTimeoutId)
+      window.clearTimeout(clearTimeoutId)
+    }
+  }, [saveMessage])
 
   useEffect(() => {
     try {
@@ -336,7 +360,7 @@ function App() {
       setSavedForms(next)
       setSelectedFormId(formId)
       setLoadedFormId(formId)
-      setSaveMessage(`Formulario guardado con ID: ${formId}`)
+      setSaveMessage('Formulario guardado. Ya puedes generar el PDF.')
       setSubmitted(true)
     } catch {
       setSaveMessage('Error al guardar formulario en este navegador.')
@@ -993,8 +1017,11 @@ function App() {
           </button>
         </div>
 
-        {submitted && <p className="hint success">Formulario guardado. Ya puedes generar el PDF.</p>}
-        {saveMessage && <p className={`hint ${isSaveError ? '' : 'success'}`}>{saveMessage}</p>}
+        {saveMessage && (
+          <p className={`hint ${isSaveError ? '' : 'success'} ${isSaveMessageFading ? 'fade-out' : ''}`}>
+            {saveMessage}
+          </p>
+        )}
       </form>
     </main>
   )
