@@ -8,11 +8,10 @@ type FormState = {
   fechaNacimiento: string
   edad: string
   sexo: string
-  dniHistoria: string
+  diagnostico: string
   telefonoPaciente: string
   direccion: string
   fechaEvaluacion: string
-  evaluador: string
   caidas12Meses: string
   lesionesRelacionadas: string
   enfermedadesCronicas: string
@@ -20,7 +19,7 @@ type FormState = {
   ayudaMarcha: string
   limitacionesCognitivas: string
   fc: string
-  ta: string
+  pa: string
   satO2: string
   fr: string
   dolor: string
@@ -41,20 +40,19 @@ type FormState = {
   movilidadGlobal: string
   riesgoCaidas: string
   comentariosClave: string
-  objetivo1: string
-  objetivo2: string
-  objetivo3: string
+  objetivosTerapia: string
   sesionesSemana: string
   duracionSesion: string
   intervenciones: string[]
   ejerciciosHoy: string
-  impresionFuncional: string
+  recomendaciones: string
+  evolucion: string
   notasAdicionales: string
 }
 
 type SavedForm = {
   id: string
-  data: FormState
+  data: Partial<FormState>
   updatedAt: string
 }
 
@@ -63,11 +61,10 @@ const initialForm: FormState = {
   fechaNacimiento: '',
   edad: '',
   sexo: '',
-  dniHistoria: '',
+  diagnostico: '',
   telefonoPaciente: '',
   direccion: '',
   fechaEvaluacion: '',
-  evaluador: '',
   caidas12Meses: '',
   lesionesRelacionadas: '',
   enfermedadesCronicas: '',
@@ -75,7 +72,7 @@ const initialForm: FormState = {
   ayudaMarcha: '',
   limitacionesCognitivas: '',
   fc: '',
-  ta: '',
+  pa: '',
   satO2: '',
   fr: '',
   dolor: '',
@@ -96,15 +93,23 @@ const initialForm: FormState = {
   movilidadGlobal: '',
   riesgoCaidas: '',
   comentariosClave: '',
-  objetivo1: '',
-  objetivo2: '',
-  objetivo3: '',
+  objetivosTerapia: '',
   sesionesSemana: '',
   duracionSesion: '',
   intervenciones: [],
   ejerciciosHoy: '',
-  impresionFuncional: '',
+  recomendaciones: '',
+  evolucion: '',
   notasAdicionales: '',
+}
+
+type LegacyFormData = Partial<FormState> & {
+  dniHistoria?: string
+  ta?: string
+  objetivo1?: string
+  objetivo2?: string
+  objetivo3?: string
+  impresionFuncional?: string
 }
 
 const interventionOptions = [
@@ -127,6 +132,24 @@ const cloneForm = (form: FormState): FormState => ({
   ...form,
   intervenciones: [...form.intervenciones],
 })
+
+const hydrateForm = (raw?: LegacyFormData): FormState => {
+  const safe = raw ?? {}
+  const legacyObjetivos = [safe.objetivo1, safe.objetivo2, safe.objetivo3]
+    .map((item) => (item ?? '').trim())
+    .filter(Boolean)
+    .join('\n')
+
+  return {
+    ...initialForm,
+    ...safe,
+    diagnostico: (safe.diagnostico ?? safe.dniHistoria ?? '').trim(),
+    pa: (safe.pa ?? safe.ta ?? '').trim(),
+    objetivosTerapia: (safe.objetivosTerapia ?? legacyObjetivos).trim(),
+    evolucion: (safe.evolucion ?? safe.impresionFuncional ?? '').trim(),
+    intervenciones: Array.isArray(safe.intervenciones) ? safe.intervenciones : [],
+  }
+}
 
 const buildFormId = (nombrePaciente: string, telefonoPaciente: string) =>
   `${nombrePaciente.trim()} + ${telefonoPaciente.trim()}`
@@ -159,9 +182,14 @@ function App() {
   const [submitted, setSubmitted] = useState(false)
   const [savedForms, setSavedForms] = useState<SavedForm[]>([])
   const [selectedFormId, setSelectedFormId] = useState('')
+  const [loadedFormId, setLoadedFormId] = useState('')
   const [saveMessage, setSaveMessage] = useState('')
 
   const today = useMemo(() => new Date().toLocaleDateString('es-ES'), [])
+  const isSaveError =
+    saveMessage.startsWith('Error') ||
+    saveMessage.startsWith('Para guardar') ||
+    saveMessage.startsWith('No fue posible')
 
   const fetchSavedForms = async () => {
     const response = await fetch('/api/forms')
@@ -247,6 +275,7 @@ function App() {
       const forms = await fetchSavedForms()
       setSavedForms(forms)
       setSelectedFormId(formId)
+      setLoadedFormId(formId)
       setSaveMessage(`Formulario guardado con ID: ${formId}`)
       setSubmitted(true)
     } catch {
@@ -267,8 +296,9 @@ function App() {
       return
     }
 
-    setForm(cloneForm(selectedForm.data))
+    setForm(cloneForm(hydrateForm(selectedForm.data)))
     setSelectedFormId(formId)
+    setLoadedFormId(formId)
     setSubmitted(true)
     setSaveMessage(`Formulario cargado: ${formId}`)
   }
@@ -276,8 +306,43 @@ function App() {
   const handleNewForm = () => {
     setForm(cloneForm(initialForm))
     setSelectedFormId('')
+    setLoadedFormId('')
     setSubmitted(false)
     setSaveMessage('Nuevo formulario listo para completar.')
+  }
+
+  const handleDeleteLoadedForm = async () => {
+    if (!loadedFormId) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `¿Deseas eliminar el formulario cargado?\n\n${loadedFormId}\n\nEsta acción no se puede deshacer.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/forms/${encodeURIComponent(loadedFormId)}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('No fue posible eliminar el formulario.')
+      }
+
+      const forms = await fetchSavedForms()
+      setSavedForms(forms)
+      setForm(cloneForm(initialForm))
+      setSelectedFormId('')
+      setLoadedFormId('')
+      setSubmitted(false)
+      setSaveMessage('Formulario eliminado correctamente.')
+    } catch {
+      setSaveMessage('Error al eliminar formulario en servidor.')
+    }
   }
 
   const getLogoDataUrl = async () => {
@@ -367,11 +432,10 @@ function App() {
       { label: 'Fecha de nacimiento', value: form.fechaNacimiento },
       { label: 'Edad', value: form.edad },
       { label: 'Sexo', value: form.sexo },
-      { label: 'DNI / Historia clínica', value: form.dniHistoria },
+      { label: 'Diagnóstico', value: form.diagnostico },
       { label: 'Teléfono', value: form.telefonoPaciente },
       { label: 'Dirección', value: form.direccion },
       { label: 'Fecha de evaluación', value: form.fechaEvaluacion },
-      { label: 'Evaluador', value: form.evaluador },
     ])
 
     writeSection('2. Antecedentes relevantes', [
@@ -385,7 +449,7 @@ function App() {
 
     writeSection('3. Signos vitales y cribado', [
       { label: 'FC (lpm)', value: form.fc },
-      { label: 'TA (mmHg)', value: form.ta },
+      { label: 'PA (mmHg)', value: form.pa },
       { label: 'SatO2 (%)', value: form.satO2 },
       { label: 'FR (rpm)', value: form.fr },
       { label: 'Dolor (0-10)', value: form.dolor },
@@ -409,9 +473,7 @@ function App() {
       { label: 'Movilidad global', value: form.movilidadGlobal },
       { label: 'Riesgo de caídas', value: form.riesgoCaidas },
       { label: 'Comentarios clave', value: form.comentariosClave },
-      { label: 'Objetivo 1', value: form.objetivo1 },
-      { label: 'Objetivo 2', value: form.objetivo2 },
-      { label: 'Objetivo 3', value: form.objetivo3 },
+      { label: 'Objetivos de terapia física', value: form.objetivosTerapia },
       { label: 'Sesiones por semana', value: form.sesionesSemana },
       { label: 'Duración por sesión (min)', value: form.duracionSesion },
       {
@@ -419,7 +481,8 @@ function App() {
         value: form.intervenciones.join(', '),
       },
       { label: 'Ejercicios indicados hoy', value: form.ejerciciosHoy },
-      { label: 'Impresión funcional / plan 3 meses', value: form.impresionFuncional },
+      { label: 'Recomendaciones', value: form.recomendaciones },
+      { label: 'Evolución', value: form.evolucion },
       { label: 'Notas adicionales', value: form.notasAdicionales },
     ])
 
@@ -461,6 +524,9 @@ function App() {
           <button type="button" onClick={handleNewForm}>
             Nuevo formulario
           </button>
+          <button type="button" onClick={handleDeleteLoadedForm} disabled={!loadedFormId} className="btn-danger">
+            Eliminar formulario
+          </button>
         </div>
       </section>
 
@@ -470,7 +536,7 @@ function App() {
           <div className="grid two-cols">
             <label>
               Nombre
-              <input name="nombrePaciente" value={form.nombrePaciente} onChange={handleChange} required />
+              <input name="nombrePaciente" value={form.nombrePaciente} onChange={handleChange} />
             </label>
             <label>
               Fecha de nacimiento
@@ -485,20 +551,16 @@ function App() {
               <input name="sexo" value={form.sexo} onChange={handleChange} />
             </label>
             <label>
-              DNI / Historia clínica
-              <input name="dniHistoria" value={form.dniHistoria} onChange={handleChange} />
+              Diagnóstico
+              <input name="diagnostico" value={form.diagnostico} onChange={handleChange} />
             </label>
             <label>
               Teléfono
-              <input name="telefonoPaciente" value={form.telefonoPaciente} onChange={handleChange} required />
+              <input name="telefonoPaciente" value={form.telefonoPaciente} onChange={handleChange} />
             </label>
             <label>
               Fecha evaluación
               <input type="date" name="fechaEvaluacion" value={form.fechaEvaluacion} onChange={handleChange} />
-            </label>
-            <label>
-              Evaluador
-              <input name="evaluador" value={form.evaluador} onChange={handleChange} />
             </label>
           </div>
           <label>
@@ -547,8 +609,8 @@ function App() {
               <input name="fc" value={form.fc} onChange={handleChange} />
             </label>
             <label>
-              TA
-              <input name="ta" value={form.ta} onChange={handleChange} />
+              PA
+              <input name="pa" value={form.pa} onChange={handleChange} />
             </label>
             <label>
               SatO2
@@ -664,20 +726,10 @@ function App() {
             <textarea name="comentariosClave" value={form.comentariosClave} onChange={handleChange} rows={3} />
           </label>
 
-          <div className="grid three-cols">
-            <label>
-              Objetivo 1 (4-6 semanas)
-              <input name="objetivo1" value={form.objetivo1} onChange={handleChange} />
-            </label>
-            <label>
-              Objetivo 2
-              <input name="objetivo2" value={form.objetivo2} onChange={handleChange} />
-            </label>
-            <label>
-              Objetivo 3
-              <input name="objetivo3" value={form.objetivo3} onChange={handleChange} />
-            </label>
-          </div>
+          <label>
+            Objetivos de terapia física
+            <textarea name="objetivosTerapia" value={form.objetivosTerapia} onChange={handleChange} rows={4} />
+          </label>
 
           <div className="grid two-cols">
             <label>
@@ -709,8 +761,12 @@ function App() {
             <textarea name="ejerciciosHoy" value={form.ejerciciosHoy} onChange={handleChange} rows={3} />
           </label>
           <label>
-            Impresión funcional / plan a 3 meses
-            <textarea name="impresionFuncional" value={form.impresionFuncional} onChange={handleChange} rows={3} />
+            Recomendaciones
+            <textarea name="recomendaciones" value={form.recomendaciones} onChange={handleChange} rows={3} />
+          </label>
+          <label>
+            Evolución
+            <textarea name="evolucion" value={form.evolucion} onChange={handleChange} rows={3} />
           </label>
           <label>
             Notas adicionales
@@ -728,7 +784,7 @@ function App() {
         </div>
 
         {submitted && <p className="hint success">Formulario guardado. Ya puedes generar el PDF.</p>}
-        {saveMessage && <p className="hint success">{saveMessage}</p>}
+        {saveMessage && <p className={`hint ${isSaveError ? '' : 'success'}`}>{saveMessage}</p>}
       </form>
     </main>
   )

@@ -157,6 +157,16 @@ textarea {
   border-color: #2f4a6f;
 }
 
+.btn-danger {
+  background-color: #ffffff;
+  border-color: #9a2f2f;
+  color: #9a2f2f;
+}
+
+.btn-danger:hover {
+  border-color: #7a2020;
+}
+
 .hint {
   margin: 0;
   color: #6f6f6f;

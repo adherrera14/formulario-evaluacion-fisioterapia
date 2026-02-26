@@ -42,6 +42,18 @@ class JsonFormsStore {
     await fs.writeFile(DATA_FILE, JSON.stringify(next, null, 2), 'utf-8')
     return saved
   }
+
+  async remove(id) {
+    const forms = await this.list()
+    const next = forms.filter((item) => item.id !== id)
+
+    if (next.length === forms.length) {
+      return false
+    }
+
+    await fs.writeFile(DATA_FILE, JSON.stringify(next, null, 2), 'utf-8')
+    return true
+  }
 }
 
 const store = new JsonFormsStore()
@@ -76,6 +88,27 @@ app.post('/api/forms', async (req, res) => {
     res.status(201).json(saved)
   } catch {
     res.status(500).json({ message: 'No fue posible guardar el formulario.' })
+  }
+})
+
+app.delete('/api/forms/:id', async (req, res) => {
+  const id = (req.params.id ?? '').trim()
+
+  if (!id) {
+    res.status(400).json({ message: 'ID inválido.' })
+    return
+  }
+
+  try {
+    const deleted = await store.remove(id)
+    if (!deleted) {
+      res.status(404).json({ message: 'Formulario no encontrado.' })
+      return
+    }
+
+    res.status(204).send()
+  } catch {
+    res.status(500).json({ message: 'No fue posible eliminar el formulario.' })
   }
 })
 
