@@ -117,6 +117,29 @@ const professionalProfile = {
   codigo: 'CTCR TF-2417',
 }
 
+const calculateAge = (birthDateValue: string) => {
+  if (!birthDateValue) {
+    return ''
+  }
+
+  const birthDate = new Date(`${birthDateValue}T00:00:00`)
+  if (Number.isNaN(birthDate.getTime())) {
+    return ''
+  }
+
+  const todayDate = new Date()
+  let years = todayDate.getFullYear() - birthDate.getFullYear()
+  const hasNotHadBirthdayYet =
+    todayDate.getMonth() < birthDate.getMonth() ||
+    (todayDate.getMonth() === birthDate.getMonth() && todayDate.getDate() < birthDate.getDate())
+
+  if (hasNotHadBirthdayYet) {
+    years -= 1
+  }
+
+  return years >= 0 ? String(years) : ''
+}
+
 function App() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [submitted, setSubmitted] = useState(false)
@@ -127,7 +150,17 @@ function App() {
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = event.target
-    setForm((prev) => ({ ...prev, [name]: value }))
+    setForm((prev) => {
+      if (name === 'fechaNacimiento') {
+        return {
+          ...prev,
+          fechaNacimiento: value,
+          edad: calculateAge(value),
+        }
+      }
+
+      return { ...prev, [name]: value }
+    })
   }
 
   const handleInterventionToggle = (value: string) => {
@@ -322,7 +355,7 @@ function App() {
             </label>
             <label>
               Edad
-              <input name="edad" value={form.edad} onChange={handleChange} />
+              <input name="edad" value={form.edad} readOnly />
             </label>
             <label>
               Sexo
