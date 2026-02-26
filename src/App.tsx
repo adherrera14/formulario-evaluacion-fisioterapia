@@ -156,6 +156,75 @@ const hydrateForm = (raw?: LegacyFormData): FormState => {
 const buildFormId = (nombrePaciente: string, telefonoPaciente: string) =>
   `${nombrePaciente.trim()} + ${telefonoPaciente.trim()}`
 
+const pdfMonthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+]
+
+const formatDateForPdf = (value: string | Date) => {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return ''
+    }
+
+    return `${value.getDate()} ${pdfMonthNames[value.getMonth()]} ${value.getFullYear()}`
+  }
+
+  const trimmedValue = value.trim()
+  if (!trimmedValue) {
+    return ''
+  }
+
+  const isoMatch = trimmedValue.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (isoMatch) {
+    const year = Number(isoMatch[1])
+    const monthIndex = Number(isoMatch[2]) - 1
+    const day = Number(isoMatch[3])
+    const parsedDate = new Date(year, monthIndex, day)
+
+    if (
+      parsedDate.getFullYear() === year &&
+      parsedDate.getMonth() === monthIndex &&
+      parsedDate.getDate() === day
+    ) {
+      return `${day} ${pdfMonthNames[monthIndex]} ${year}`
+    }
+  }
+
+  const slashMatch = trimmedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  if (slashMatch) {
+    const day = Number(slashMatch[1])
+    const monthIndex = Number(slashMatch[2]) - 1
+    const year = Number(slashMatch[3])
+    const parsedDate = new Date(year, monthIndex, day)
+
+    if (
+      parsedDate.getFullYear() === year &&
+      parsedDate.getMonth() === monthIndex &&
+      parsedDate.getDate() === day
+    ) {
+      return `${day} ${pdfMonthNames[monthIndex]} ${year}`
+    }
+  }
+
+  const fallbackDate = new Date(trimmedValue)
+  if (Number.isNaN(fallbackDate.getTime())) {
+    return trimmedValue
+  }
+
+  return `${fallbackDate.getDate()} ${pdfMonthNames[fallbackDate.getMonth()]} ${fallbackDate.getFullYear()}`
+}
+
 const calculateAge = (birthDateValue: string) => {
   if (!birthDateValue) {
     return ''
@@ -187,7 +256,7 @@ function App() {
   const [loadedFormId, setLoadedFormId] = useState('')
   const [saveMessage, setSaveMessage] = useState('')
 
-  const today = useMemo(() => new Date().toLocaleDateString('es-ES'), [])
+  const today = useMemo(() => formatDateForPdf(new Date()), [])
   const logoPath = `${import.meta.env.BASE_URL}logo.png`
   const isSaveError =
     saveMessage.startsWith('Error') ||
@@ -349,33 +418,224 @@ function App() {
     })
   }
 
-  const addLabeledLine = (
-    doc: jsPDF,
-    label: string,
-    value: string,
-    cursorY: number,
-    pageWidth: number,
-  ) => {
-    const content = `${label}: ${value.trim()}`
-    const lines = doc.splitTextToSize(content, pageWidth - 20)
-    doc.text(lines, 10, cursorY)
-    return cursorY + lines.length * 6
-  }
-
-  const ensurePage = (doc: jsPDF, cursorY: number) => {
-    if (cursorY > 275) {
-      doc.addPage()
-      return 15
-    }
-    return cursorY
-  }
-
   const generatePdf = async () => {
-    const doc = new jsPDF()
+    const doc = new jsPDF({ orientation: 'portrait' })
     const pageWidth = doc.internal.pageSize.getWidth()
-    const rightX = pageWidth - 10
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const leftMargin = 15
+    const rightMargin = pageWidth - leftMargin
+    const topMarginFirstPage = 62
+    const topMarginNextPages = 16
+    const bottomMargin = 6
+    const contentBottom = pageHeight - bottomMargin
+    const twoColumnGap = 10
+    const threeColumnGap = 7
+    const valueIndent = 1.5
+    const titleFontSize = 13
+    const sectionFontSize = 12
+    const labelFontSize = 10
+    const valueFontSize = 10.5
+    const metaFontSize = 10.5
+    const sectionLineHeight = 6.5
+    const bodyLineHeight = 5.2
+    const blockSpacing = 2
+
+    const sections = [
+      {
+        title: '1. Datos del paciente',
+        rows: [
+          { label: 'Nombre', value: form.nombrePaciente },
+          { label: 'Fecha de nacimiento', value: formatDateForPdf(form.fechaNacimiento) },
+          { label: 'Edad', value: form.edad },
+          { label: 'Sexo', value: form.sexo },
+          { label: 'Diagnóstico', value: form.diagnostico },
+          { label: 'Teléfono', value: form.telefonoPaciente },
+          { label: 'Dirección', value: form.direccion },
+          { label: 'Fecha de evaluación', value: formatDateForPdf(form.fechaEvaluacion) },
+        ],
+      },
+      {
+        title: '2. Antecedentes relevantes',
+        rows: [
+          { label: 'Caídas últimos 12 meses', value: form.caidas12Meses },
+          { label: 'Lesiones relacionadas', value: form.lesionesRelacionadas },
+          { label: 'Enfermedades crónicas', value: form.enfermedadesCronicas },
+          { label: 'Medicación relevante', value: form.medicacionRelevante },
+          { label: 'Ayudas para la marcha', value: form.ayudaMarcha },
+          { label: 'Limitaciones cognitivas/sensoriales', value: form.limitacionesCognitivas },
+        ],
+      },
+      {
+        title: '3. Signos vitales y cribado',
+        rows: [
+          { label: 'FC (lpm)', value: form.fc },
+          { label: 'PA (mmHg)', value: form.pa },
+          { label: 'SatO2 (%)', value: form.satO2 },
+          { label: 'FR (rpm)', value: form.fr },
+          { label: 'Dolor (0-10)', value: form.dolor },
+          { label: 'TUG tiempo (s)', value: form.tugTiempo },
+          { label: 'TUG observaciones', value: form.tugObservaciones },
+          { label: 'Marcha 4m tiempo (s)', value: form.marchaTiempo },
+          { label: 'Marcha velocidad (m/s)', value: form.marchaVelocidad },
+          { label: 'Marcha observaciones', value: form.marchaObservaciones },
+          { label: 'Chair Stand tipo', value: form.chairStandTipo },
+          { label: 'Chair Stand resultado', value: form.chairStandResultado },
+          { label: 'Chair Stand observaciones', value: form.chairStandObservaciones },
+          { label: '¿Tuvo caídas?', value: form.tuvoCaidas },
+          { label: 'Detalle de caídas', value: form.caidasDetalle },
+          { label: 'Miedo a caer', value: form.miedoCaer },
+          { label: 'Functional Reach (cm)', value: form.functionalReach },
+          { label: 'Functional Reach observaciones', value: form.functionalReachObs },
+          { label: 'FES-I breve puntaje', value: form.fesPuntaje },
+        ],
+      },
+      {
+        title: '4. Resumen y plan',
+        rows: [
+          { label: 'Movilidad global', value: form.movilidadGlobal },
+          { label: 'Riesgo de caídas', value: form.riesgoCaidas },
+          { label: 'Comentarios clave', value: form.comentariosClave },
+          { label: 'Objetivos de terapia física', value: form.objetivosTerapia },
+          { label: 'Sesiones por semana', value: form.sesionesSemana },
+          { label: 'Duración por sesión (min)', value: form.duracionSesion },
+          {
+            label: 'Intervenciones propuestas',
+            value: form.intervenciones.join(', '),
+          },
+          { label: 'Ejercicios indicados hoy', value: form.ejerciciosHoy },
+          { label: 'Recomendaciones', value: form.recomendaciones },
+          { label: 'Evolución', value: form.evolucion },
+          { label: 'Notas adicionales', value: form.notasAdicionales },
+        ],
+      },
+    ]
+
+    const getColumnWidth = (count: number, gap: number) =>
+      (pageWidth - leftMargin * 2 - gap * (count - 1)) / count
+
+    const estimatePagesForLayout = (count: number, gap: number) => {
+      const estimatedColumnWidth = getColumnWidth(count, gap)
+      let simulatedCursorY = topMarginFirstPage
+      let simulatedColumn = 0
+      let simulatedTopMargin = topMarginFirstPage
+      let simulatedPages = 1
+
+      const moveToNextEstimatedArea = () => {
+        if (simulatedColumn < count - 1) {
+          simulatedColumn += 1
+          simulatedCursorY = simulatedTopMargin
+          return
+        }
+
+        simulatedPages += 1
+        simulatedColumn = 0
+        simulatedTopMargin = topMarginNextPages
+        simulatedCursorY = simulatedTopMargin
+      }
+
+      const ensureEstimatedSpace = (requiredHeight: number) => {
+        if (simulatedCursorY + requiredHeight > contentBottom) {
+          moveToNextEstimatedArea()
+        }
+      }
+
+      const getEstimatedRowBlockHeight = (label: string, value: string) => {
+        const labelLines = doc.splitTextToSize(label.trim(), estimatedColumnWidth)
+        const valueLines = doc.splitTextToSize(value.trim(), estimatedColumnWidth - valueIndent)
+
+        return labelLines.length * bodyLineHeight + valueLines.length * bodyLineHeight + blockSpacing
+      }
+
+      sections.forEach((section) => {
+        const rowsWithValue = section.rows.filter((row) => row.value.trim().length > 0)
+        if (rowsWithValue.length === 0) {
+          return
+        }
+
+        const titleLines = doc.splitTextToSize(section.title, estimatedColumnWidth)
+        const titleBlockHeight = titleLines.length * sectionLineHeight + 7
+        const firstRow = rowsWithValue[0]
+        const keepWithNextHeight = titleBlockHeight + getEstimatedRowBlockHeight(firstRow.label, firstRow.value)
+
+        ensureEstimatedSpace(keepWithNextHeight)
+        simulatedCursorY += titleLines.length * sectionLineHeight + 3
+
+        rowsWithValue.forEach((row) => {
+          const blockHeight = getEstimatedRowBlockHeight(row.label, row.value)
+
+          ensureEstimatedSpace(blockHeight)
+          simulatedCursorY += blockHeight
+        })
+
+        simulatedCursorY += 4
+      })
+
+      return simulatedPages
+    }
+
+    const useTwoColumns = estimatePagesForLayout(2, twoColumnGap) === 1
+    const columnCount = useTwoColumns ? 2 : 3
+    const columnGap = useTwoColumns ? twoColumnGap : threeColumnGap
+    const columnWidth = getColumnWidth(columnCount, columnGap)
 
     let cursorY = 8
+    let currentColumn = 0
+    let currentTopMargin = topMarginFirstPage
+
+    const getColumnX = () => leftMargin + currentColumn * (columnWidth + columnGap)
+
+    const moveToNextFlowArea = () => {
+      if (currentColumn < columnCount - 1) {
+        currentColumn += 1
+        cursorY = currentTopMargin
+        return
+      }
+
+      doc.addPage()
+      currentColumn = 0
+      currentTopMargin = topMarginNextPages
+      cursorY = currentTopMargin
+    }
+
+    const ensureSpace = (requiredHeight: number) => {
+      if (cursorY + requiredHeight > contentBottom) {
+        moveToNextFlowArea()
+      }
+    }
+
+    const getRowBlockHeight = (label: string, value: string) => {
+      const labelLines = doc.splitTextToSize(label.trim(), columnWidth)
+      const valueLines = doc.splitTextToSize(value.trim(), columnWidth - valueIndent)
+
+      return labelLines.length * bodyLineHeight + valueLines.length * bodyLineHeight + blockSpacing
+    }
+
+    const writeLabeledBlock = (label: string, value: string) => {
+      const trimmedLabel = label.trim()
+      const trimmedValue = value.trim()
+      if (!trimmedValue) {
+        return
+      }
+
+      const labelLines = doc.splitTextToSize(trimmedLabel, columnWidth)
+      const valueLines = doc.splitTextToSize(trimmedValue, columnWidth - valueIndent)
+      const blockHeight =
+        labelLines.length * bodyLineHeight + valueLines.length * bodyLineHeight + blockSpacing
+
+      ensureSpace(blockHeight)
+
+      const columnX = getColumnX()
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(labelFontSize)
+      doc.text(labelLines, columnX, cursorY)
+      cursorY += labelLines.length * bodyLineHeight
+
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(valueFontSize)
+      doc.text(valueLines, columnX + valueIndent, cursorY)
+      cursorY += valueLines.length * bodyLineHeight + blockSpacing
+    }
+
     const logoDataUrl = await getLogoDataUrl()
     if (logoDataUrl) {
       const maxLogoWidth = 46
@@ -387,21 +647,23 @@ function App() {
       const logoWidth = logoProps.width * scale
       const logoHeight = logoProps.height * scale
 
-      doc.addImage(logoDataUrl, 'PNG', 10, cursorY, logoWidth, logoHeight)
+      doc.addImage(logoDataUrl, 'PNG', leftMargin, cursorY, logoWidth, logoHeight)
     }
 
-    doc.setFontSize(16)
-    doc.text('Informe de Valoración Funcional', rightX, 14, { align: 'right' })
-    doc.setFontSize(10)
-    doc.text(`Fecha de emisión: ${today}`, rightX, 20, { align: 'right' })
-    doc.text(`Fisioterapeuta: ${professionalProfile.nombre}`, rightX, 26, { align: 'right' })
-    doc.text(`Teléfono: ${professionalProfile.telefono}`, rightX, 32, { align: 'right' })
-    doc.text(`Email: ${professionalProfile.email}`, rightX, 38, { align: 'right' })
-    doc.text(`Código profesional: ${professionalProfile.codigo}`, rightX, 44, { align: 'right' })
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(titleFontSize)
+    doc.text('Informe de Valoración Funcional', rightMargin, 14, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(metaFontSize)
+    doc.text(`Fecha de emisión: ${today}`, rightMargin, 20, { align: 'right' })
+    doc.text(`Fisioterapeuta: ${professionalProfile.nombre}`, rightMargin, 26, { align: 'right' })
+    doc.text(`Teléfono: ${professionalProfile.telefono}`, rightMargin, 32, { align: 'right' })
+    doc.text(`Email: ${professionalProfile.email}`, rightMargin, 38, { align: 'right' })
+    doc.text(`Código profesional: ${professionalProfile.codigo}`, rightMargin, 44, { align: 'right' })
     doc.setLineWidth(0.4)
-    doc.line(10, 54, pageWidth - 10, 54)
+    doc.line(leftMargin, 54, rightMargin, 54)
 
-    cursorY = 62
+    cursorY = currentTopMargin
 
     const writeSection = (title: string, rows: Array<{ label: string; value: string }>) => {
       const rowsWithValue = rows.filter((row) => row.value.trim().length > 0)
@@ -409,76 +671,30 @@ function App() {
         return
       }
 
-      cursorY = ensurePage(doc, cursorY)
-      doc.setFontSize(12)
-      doc.text(title, 10, cursorY)
-      cursorY += 7
-      doc.setFontSize(10)
+      const titleLines = doc.splitTextToSize(title, columnWidth)
+      const titleBlockHeight = titleLines.length * sectionLineHeight + 7
+      const firstRow = rowsWithValue[0]
+      const keepWithNextHeight = titleBlockHeight + getRowBlockHeight(firstRow.label, firstRow.value)
+
+      ensureSpace(keepWithNextHeight)
+
+      const columnX = getColumnX()
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(sectionFontSize)
+      doc.text(titleLines, columnX, cursorY)
+      cursorY += titleLines.length * sectionLineHeight
+      cursorY += 3
+
       rowsWithValue.forEach((row) => {
-        cursorY = ensurePage(doc, cursorY)
-        cursorY = addLabeledLine(doc, row.label, row.value, cursorY, pageWidth)
+        writeLabeledBlock(row.label, row.value)
       })
+
       cursorY += 4
     }
 
-    writeSection('1. Datos del paciente', [
-      { label: 'Nombre', value: form.nombrePaciente },
-      { label: 'Fecha de nacimiento', value: form.fechaNacimiento },
-      { label: 'Edad', value: form.edad },
-      { label: 'Sexo', value: form.sexo },
-      { label: 'Diagnóstico', value: form.diagnostico },
-      { label: 'Teléfono', value: form.telefonoPaciente },
-      { label: 'Dirección', value: form.direccion },
-      { label: 'Fecha de evaluación', value: form.fechaEvaluacion },
-    ])
-
-    writeSection('2. Antecedentes relevantes', [
-      { label: 'Caídas últimos 12 meses', value: form.caidas12Meses },
-      { label: 'Lesiones relacionadas', value: form.lesionesRelacionadas },
-      { label: 'Enfermedades crónicas', value: form.enfermedadesCronicas },
-      { label: 'Medicación relevante', value: form.medicacionRelevante },
-      { label: 'Ayudas para la marcha', value: form.ayudaMarcha },
-      { label: 'Limitaciones cognitivas/sensoriales', value: form.limitacionesCognitivas },
-    ])
-
-    writeSection('3. Signos vitales y cribado', [
-      { label: 'FC (lpm)', value: form.fc },
-      { label: 'PA (mmHg)', value: form.pa },
-      { label: 'SatO2 (%)', value: form.satO2 },
-      { label: 'FR (rpm)', value: form.fr },
-      { label: 'Dolor (0-10)', value: form.dolor },
-      { label: 'TUG tiempo (s)', value: form.tugTiempo },
-      { label: 'TUG observaciones', value: form.tugObservaciones },
-      { label: 'Marcha 4m tiempo (s)', value: form.marchaTiempo },
-      { label: 'Marcha velocidad (m/s)', value: form.marchaVelocidad },
-      { label: 'Marcha observaciones', value: form.marchaObservaciones },
-      { label: 'Chair Stand tipo', value: form.chairStandTipo },
-      { label: 'Chair Stand resultado', value: form.chairStandResultado },
-      { label: 'Chair Stand observaciones', value: form.chairStandObservaciones },
-      { label: '¿Tuvo caídas?', value: form.tuvoCaidas },
-      { label: 'Detalle de caídas', value: form.caidasDetalle },
-      { label: 'Miedo a caer', value: form.miedoCaer },
-      { label: 'Functional Reach (cm)', value: form.functionalReach },
-      { label: 'Functional Reach observaciones', value: form.functionalReachObs },
-      { label: 'FES-I breve puntaje', value: form.fesPuntaje },
-    ])
-
-    writeSection('4. Resumen y plan', [
-      { label: 'Movilidad global', value: form.movilidadGlobal },
-      { label: 'Riesgo de caídas', value: form.riesgoCaidas },
-      { label: 'Comentarios clave', value: form.comentariosClave },
-      { label: 'Objetivos de terapia física', value: form.objetivosTerapia },
-      { label: 'Sesiones por semana', value: form.sesionesSemana },
-      { label: 'Duración por sesión (min)', value: form.duracionSesion },
-      {
-        label: 'Intervenciones propuestas',
-        value: form.intervenciones.join(', '),
-      },
-      { label: 'Ejercicios indicados hoy', value: form.ejerciciosHoy },
-      { label: 'Recomendaciones', value: form.recomendaciones },
-      { label: 'Evolución', value: form.evolucion },
-      { label: 'Notas adicionales', value: form.notasAdicionales },
-    ])
+    sections.forEach((section) => {
+      writeSection(section.title, section.rows)
+    })
 
     doc.save(
       `informe-valoracion-${form.nombrePaciente
