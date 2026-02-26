@@ -128,6 +128,8 @@ const professionalProfile = {
   codigo: 'CTCR TF-2417',
 }
 
+const FORMS_STORAGE_KEY = 'formularios-evaluacion-funcional'
+
 const cloneForm = (form: FormState): FormState => ({
   ...form,
   intervenciones: [...form.intervenciones],
@@ -191,28 +193,23 @@ function App() {
     saveMessage.startsWith('Para guardar') ||
     saveMessage.startsWith('No fue posible')
 
-  const fetchSavedForms = async () => {
-    const response = await fetch('/api/forms')
-    if (!response.ok) {
-      throw new Error('No fue posible cargar formularios guardados.')
-    }
-
-    const payload = (await response.json()) as SavedForm[]
-    return payload
-      .filter((item) => item?.id && item?.data)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-  }
-
   useEffect(() => {
-    void (async () => {
-      try {
-        const forms = await fetchSavedForms()
-        setSavedForms(forms)
-      } catch {
+    try {
+      const raw = localStorage.getItem(FORMS_STORAGE_KEY)
+      if (!raw) {
         setSavedForms([])
-        setSaveMessage('No fue posible conectar con el servidor de formularios.')
+        return
       }
-    })()
+
+      const parsed = JSON.parse(raw) as SavedForm[]
+      const normalized = parsed
+        .filter((item) => item?.id && item?.data)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      setSavedForms(normalized)
+    } catch {
+      setSavedForms([])
+      setSaveMessage('No fue posible leer formularios guardados en este navegador.')
+    }
   }, [])
 
   const handleChange = (
@@ -257,29 +254,22 @@ function App() {
 
     const formId = buildFormId(nombrePaciente, telefonoPaciente)
     try {
-      const response = await fetch('/api/forms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          id: formId,
-          data: cloneForm({ ...form, nombrePaciente, telefonoPaciente }),
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('No fue posible guardar el formulario.')
+      const now = new Date().toISOString()
+      const entry: SavedForm = {
+        id: formId,
+        data: cloneForm({ ...form, nombrePaciente, telefonoPaciente }),
+        updatedAt: now,
       }
 
-      const forms = await fetchSavedForms()
-      setSavedForms(forms)
+      const next = [entry, ...savedForms.filter((item) => item.id !== formId)]
+      localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(next))
+      setSavedForms(next)
       setSelectedFormId(formId)
       setLoadedFormId(formId)
       setSaveMessage(`Formulario guardado con ID: ${formId}`)
       setSubmitted(true)
     } catch {
-      setSaveMessage('Error al guardar en servidor. Verifica que el backend esté activo.')
+      setSaveMessage('Error al guardar formulario en este navegador.')
     }
   }
 
@@ -311,7 +301,7 @@ function App() {
     setSaveMessage('Nuevo formulario listo para completar.')
   }
 
-  const handleDeleteLoadedForm = async () => {
+  const handleDeleteLoadedForm = () => {
     if (!loadedFormId) {
       return
     }
@@ -325,27 +315,16 @@ function App() {
     }
 
     try {
-      const response = await fetch(`/api/forms/${encodeURIComponent(loadedFormId)}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          setSaveMessage('El servidor no reconoce la ruta de eliminación. Reinicia con npm run dev:full.')
-          return
-        }
-        throw new Error('No fue posible eliminar el formulario.')
-      }
-
-      const forms = await fetchSavedForms()
-      setSavedForms(forms)
+      const next = savedForms.filter((item) => item.id !== loadedFormId)
+      localStorage.setItem(FORMS_STORAGE_KEY, JSON.stringify(next))
+      setSavedForms(next)
       setForm(cloneForm(initialForm))
       setSelectedFormId('')
       setLoadedFormId('')
       setSubmitted(false)
       setSaveMessage('Formulario eliminado correctamente.')
     } catch {
-      setSaveMessage('Error al eliminar formulario en servidor.')
+      setSaveMessage('Error al eliminar formulario del navegador.')
     }
   }
 

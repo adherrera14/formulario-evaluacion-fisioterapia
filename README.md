@@ -32,17 +32,17 @@ El formulario web no solicita datos del fisioterapeuta. El PDF siempre mostrará
 
 ```bash
 npm install
-npm run dev:full
+npm run dev
 ```
 
 La app se abrirá en la URL local que indique Vite (normalmente `http://localhost:5173`).
 
-## Persistencia en servidor (JSON)
+## Persistencia local (navegador)
 
-- Los formularios se guardan en el servidor en el archivo `data/forms.json`.
+- Los formularios se guardan en `localStorage` del navegador.
 - ID de formulario: `nombre del paciente + teléfono`.
-- Al abrir la vista del formulario, el dropdown carga formularios existentes desde `/api/forms`.
-- El backend actual usa archivo JSON y está preparado para reemplazarse por base de datos más adelante.
+- Al abrir la vista del formulario, el dropdown carga formularios existentes guardados en ese navegador.
+- Este enfoque permite funcionamiento en GitHub Pages (sitio estático sin backend).
 
 ## Build de producción
 
