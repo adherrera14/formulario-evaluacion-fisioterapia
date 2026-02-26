@@ -188,6 +188,7 @@ function App() {
   const [saveMessage, setSaveMessage] = useState('')
 
   const today = useMemo(() => new Date().toLocaleDateString('es-ES'), [])
+  const logoPath = `${import.meta.env.BASE_URL}logo.png`
   const isSaveError =
     saveMessage.startsWith('Error') ||
     saveMessage.startsWith('Para guardar') ||
@@ -329,7 +330,7 @@ function App() {
   }
 
   const getLogoDataUrl = async () => {
-    const response = await fetch('/logo.png')
+    const response = await fetch(logoPath)
     if (!response.ok) {
       return null
     }
@@ -490,7 +491,7 @@ function App() {
     <main className="app-shell">
       <header className="brand-header">
         <div className="brand-logo-badge">
-          <img src="/logo.png" alt="Logo del centro" className="brand-logo" />
+          <img src={logoPath} alt="Logo del centro" className="brand-logo" />
         </div>
         <div>
           <h1>Formulario de Valoración Funcional</h1>
