@@ -118,6 +118,45 @@ textarea {
   gap: 0.7rem;
 }
 
+.saved-forms-row {
+  display: flex;
+  align-items: end;
+  gap: 0.7rem;
+}
+
+.saved-forms-field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.saved-forms-panel {
+  margin-bottom: 1rem;
+}
+
+.actions button {
+  min-height: 48px;
+  padding: 0.75rem 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background-color: #2f4a6f;
+  border-color: #2f4a6f;
+  color: #ffffff;
+}
+
+.btn-secondary {
+  background-color: #ffffff;
+  border-color: #2f4a6f;
+  color: #2f4a6f;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover {
+  border-color: #2f4a6f;
+}
+
 .hint {
   margin: 0;
   color: #6f6f6f;
@@ -132,6 +171,15 @@ textarea {
   .three-cols,
   .five-cols {
     grid-template-columns: 1fr;
+  }
+
+  .saved-forms-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .actions {
+    flex-direction: column;
   }
 
   .brand-logo {

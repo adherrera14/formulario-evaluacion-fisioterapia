@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import './App.css'
@@ -50,6 +50,12 @@ type FormState = {
   ejerciciosHoy: string
   impresionFuncional: string
   notasAdicionales: string
+}
+
+type SavedForm = {
+  id: string
+  data: FormState
+  updatedAt: string
 }
 
 const initialForm: FormState = {
@@ -117,6 +123,14 @@ const professionalProfile = {
   codigo: 'CTCR TF-2417',
 }
 
+const cloneForm = (form: FormState): FormState => ({
+  ...form,
+  intervenciones: [...form.intervenciones],
+})
+
+const buildFormId = (nombrePaciente: string, telefonoPaciente: string) =>
+  `${nombrePaciente.trim()} + ${telefonoPaciente.trim()}`
+
 const calculateAge = (birthDateValue: string) => {
   if (!birthDateValue) {
     return ''
@@ -143,8 +157,35 @@ const calculateAge = (birthDateValue: string) => {
 function App() {
   const [form, setForm] = useState<FormState>(initialForm)
   const [submitted, setSubmitted] = useState(false)
+  const [savedForms, setSavedForms] = useState<SavedForm[]>([])
+  const [selectedFormId, setSelectedFormId] = useState('')
+  const [saveMessage, setSaveMessage] = useState('')
 
   const today = useMemo(() => new Date().toLocaleDateString('es-ES'), [])
+
+  const fetchSavedForms = async () => {
+    const response = await fetch('/api/forms')
+    if (!response.ok) {
+      throw new Error('No fue posible cargar formularios guardados.')
+    }
+
+    const payload = (await response.json()) as SavedForm[]
+    return payload
+      .filter((item) => item?.id && item?.data)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  }
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const forms = await fetchSavedForms()
+        setSavedForms(forms)
+      } catch {
+        setSavedForms([])
+        setSaveMessage('No fue posible conectar con el servidor de formularios.')
+      }
+    })()
+  }, [])
 
   const handleChange = (
     event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
@@ -175,9 +216,68 @@ function App() {
     })
   }
 
-  const handleSubmit = (event: FormEvent) => {
+  const handleSubmit = async (event: FormEvent) => {
     event.preventDefault()
+
+    const nombrePaciente = form.nombrePaciente.trim()
+    const telefonoPaciente = form.telefonoPaciente.trim()
+
+    if (!nombrePaciente || !telefonoPaciente) {
+      setSaveMessage('Para guardar, completa nombre y teléfono del paciente.')
+      return
+    }
+
+    const formId = buildFormId(nombrePaciente, telefonoPaciente)
+    try {
+      const response = await fetch('/api/forms', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: formId,
+          data: cloneForm({ ...form, nombrePaciente, telefonoPaciente }),
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('No fue posible guardar el formulario.')
+      }
+
+      const forms = await fetchSavedForms()
+      setSavedForms(forms)
+      setSelectedFormId(formId)
+      setSaveMessage(`Formulario guardado con ID: ${formId}`)
+      setSubmitted(true)
+    } catch {
+      setSaveMessage('Error al guardar en servidor. Verifica que el backend esté activo.')
+    }
+  }
+
+  const handleLoadSavedForm = (formId: string) => {
+    if (!formId) {
+      setForm(cloneForm(initialForm))
+      setSubmitted(false)
+      setSaveMessage('')
+      return
+    }
+
+    const selectedForm = savedForms.find((item) => item.id === formId)
+    if (!selectedForm) {
+      return
+    }
+
+    setForm(cloneForm(selectedForm.data))
+    setSelectedFormId(formId)
     setSubmitted(true)
+    setSaveMessage(`Formulario cargado: ${formId}`)
+  }
+
+  const handleNewForm = () => {
+    setForm(cloneForm(initialForm))
+    setSelectedFormId('')
+    setSubmitted(false)
+    setSaveMessage('Nuevo formulario listo para completar.')
   }
 
   const getLogoDataUrl = async () => {
@@ -341,6 +441,29 @@ function App() {
         </div>
       </header>
 
+      <section className="panel saved-forms-panel">
+        <h2>Formularios guardados</h2>
+        <div className="saved-forms-row">
+          <label className="saved-forms-field">
+            Seleccionar formulario existente
+            <select value={selectedFormId} onChange={(event) => setSelectedFormId(event.target.value)}>
+              <option value="">Nuevo formulario</option>
+              {savedForms.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.id}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={() => handleLoadSavedForm(selectedFormId)} disabled={!selectedFormId}>
+            Cargar formulario
+          </button>
+          <button type="button" onClick={handleNewForm}>
+            Nuevo formulario
+          </button>
+        </div>
+      </section>
+
       <form onSubmit={handleSubmit} className="form-layout">
         <section className="panel">
           <h2>Datos del paciente</h2>
@@ -367,7 +490,7 @@ function App() {
             </label>
             <label>
               Teléfono
-              <input name="telefonoPaciente" value={form.telefonoPaciente} onChange={handleChange} />
+              <input name="telefonoPaciente" value={form.telefonoPaciente} onChange={handleChange} required />
             </label>
             <label>
               Fecha evaluación
@@ -596,14 +719,16 @@ function App() {
         </section>
 
         <div className="actions">
-          <button type="submit">Guardar formulario</button>
-          <button type="button" onClick={generatePdf} disabled={!submitted}>
+          <button type="submit" className="btn-primary">
+            Guardar formulario
+          </button>
+          <button type="button" onClick={generatePdf} disabled={!submitted} className="btn-secondary">
             Generar PDF
           </button>
         </div>
 
-        {!submitted && <p className="hint">Primero guarda el formulario para habilitar la exportación.</p>}
         {submitted && <p className="hint success">Formulario guardado. Ya puedes generar el PDF.</p>}
+        {saveMessage && <p className="hint success">{saveMessage}</p>}
       </form>
     </main>
   )
