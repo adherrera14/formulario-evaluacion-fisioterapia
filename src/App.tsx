@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { ChangeEvent, FormEvent } from 'react'
 import { jsPDF } from 'jspdf'
 import { Timestamp } from 'firebase/firestore'
-import { onAuthStateChanged, signOut, signInAnonymously } from 'firebase/auth'
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword } from 'firebase/auth'
 import { auth } from './firebase'
 import './App.css'
 
@@ -240,6 +240,10 @@ function App() {
   const [userId, setUserId] = useState<string | null>(null)
   const [isSigningIn, setIsSigningIn] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+  const [loginEmail, setLoginEmail] = useState('')
+  const [loginPassword, setLoginPassword] = useState('')
+  const [loginError, setLoginError] = useState('')
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   const today = useMemo(() => formatDateForPdf(new Date()), [])
   const logoPath = `${import.meta.env.BASE_URL}logo.png`
@@ -292,8 +296,7 @@ function App() {
         } else {
           setSavedForms([])
           setUserId(null)
-          // Auto sign in anonymously
-          await signInAnonymously(auth)
+          setIsSigningIn(false)
         }
       } catch (error) {
         console.error('Auth error:', error)
@@ -309,6 +312,19 @@ function App() {
   ) => {
     const { name, value } = event.target
     setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleLogin = async (event: FormEvent) => {
+    event.preventDefault()
+    setLoginError('')
+    setIsLoggingIn(true)
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail.trim(), loginPassword)
+    } catch {
+      setLoginError('Correo o contraseña incorrectos.')
+    } finally {
+      setIsLoggingIn(false)
+    }
   }
 
   const handleInterventionToggle = (value: string) => {
@@ -766,14 +782,58 @@ function App() {
     )
   }
 
+  if (isSigningIn) {
+    return (
+      <main className="app-shell">
+        <div className="loading-overlay">
+          <p>Cargando aplicación...</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (!userId) {
+    return (
+      <main className="login-screen">
+        <div className="login-card">
+          <div className="login-logo-badge">
+            <img src={logoPath} alt="Logo del centro" className="brand-logo" />
+          </div>
+          <h1>Formulario de Valoración Funcional</h1>
+          <form onSubmit={handleLogin} className="login-form">
+            <label>
+              Correo electrónico
+              <input
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
+                required
+                autoComplete="email"
+              />
+            </label>
+            <label>
+              Contraseña
+              <input
+                type="password"
+                value={loginPassword}
+                onChange={(e) => setLoginPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+              />
+            </label>
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="btn-primary" disabled={isLoggingIn}>
+              {isLoggingIn ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            </button>
+          </form>
+        </div>
+      </main>
+    )
+  }
+
   return (
     <main className="app-shell">
       <header className="brand-header">
-              {isSigningIn && (
-                <div className="loading-overlay">
-                  <p>Cargando aplicación...</p>
-                </div>
-              )}
         <div className="brand-logo-badge">
           <img src={logoPath} alt="Logo del centro" className="brand-logo" />
         </div>

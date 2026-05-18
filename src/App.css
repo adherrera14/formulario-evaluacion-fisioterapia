@@ -4,6 +4,68 @@
   padding: 2rem 1rem 4rem;
 }
 
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.login-card {
+  background: #ffffff;
+  border: 1px solid #d7d7d7;
+  border-radius: 14px;
+  padding: 2rem 2.2rem 2.4rem;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.login-card h1 {
+  font-size: 1.25rem;
+  text-align: center;
+  color: #2f4a6f;
+  margin: 0;
+}
+
+.login-logo-badge {
+  width: 110px;
+  height: 110px;
+  border-radius: 999px;
+  background: #f4f4f4;
+  display: grid;
+  place-items: center;
+}
+
+.login-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.login-form button {
+  margin-top: 0.6rem;
+  width: 100%;
+  min-height: 44px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.login-error {
+  color: #9a2f2f;
+  font-size: 0.88rem;
+  margin: 0;
+  padding: 0.4rem 0;
+}
+
 .brand-header {
   display: flex;
   flex-direction: column;
