@@ -277,7 +277,13 @@ function App() {
 
   // Firebase Auth + Load Forms
   useEffect(() => {
+    // Safety net: if Firebase never responds, stop the loading screen after 8s
+    const safetyTimer = window.setTimeout(() => {
+      setIsSigningIn(false)
+    }, 8000)
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      window.clearTimeout(safetyTimer)
       try {
         if (currentUser) {
           setUserId(currentUser.uid)
@@ -304,7 +310,11 @@ function App() {
         setIsSigningIn(false)
       }
     })
-    return () => unsubscribe()
+
+    return () => {
+      window.clearTimeout(safetyTimer)
+      unsubscribe()
+    }
   }, [])
 
   const handleChange = (
